@@ -1,7 +1,7 @@
 #include <sniffer.h>
 #include <arpa/inet.h>
 
-bool found = false;
+bool sniffer::found = false;
 
 /**
  * @brief start the sniffer upon boot
@@ -30,6 +30,22 @@ sniffer::sniffer()
 
     // start monitor mode
     start_monitor_mode();
+
+    // register commands
+    esp_console_cmd_t sniff_cmd = {
+        .command = "sniff",
+        .help = "sniff for pwnagotchis",
+        .func = &cmd_sniff,
+    };
+
+    esp_console_cmd_t stop_sniff_cmd = {
+        .command = "stop_sniff",
+        .help = "stop sniffing for pwnagotchis",
+        .func = &cmd_stop_sniff,
+    };
+
+    esp_console_cmd_register(&sniff_cmd);
+    esp_console_cmd_register(&stop_sniff_cmd);
 
     printf("Sniffer Initialized!\n"); // call me weird, but I prefer printf over std::cout
 }
@@ -99,7 +115,7 @@ void sniffer::sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
     int len = snifferPacket->rx_ctrl.sig_len;
   
     // start off false
-    found = false;
+    sniffer::found = false;
   
     if (type == WIFI_PKT_MGMT) {
         len -= 4;
@@ -116,7 +132,7 @@ void sniffer::sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
   
             // check if the source MAC matches the target
             if (src == "de:ad:be:ef:de:ad") {
-                found = true;
+                sniffer::found = true;
                 printf("Pwnagotchi detected!\n");
   
                 // extract the ESSID from the beacon frame
@@ -204,7 +220,7 @@ void sniffer::sniff(int duration)
     // start the sniffer
     esp_wifi_set_promiscuous_rx_cb(sniffer_callback);
 
-    if (duration != NULL)
+    if (duration != 0)
     {
         vTaskDelay(pdMS_TO_TICKS(duration));
     }
@@ -213,7 +229,7 @@ void sniffer::sniff(int duration)
         printf("No duration set, sniffing indefinitely\n");
     }
 
-    if (!found)
+    if (!sniffer::found)
     {
         stop_monitor_mode();
         stop_callback();
@@ -225,7 +241,7 @@ void sniffer::sniff(int duration)
         stop_monitor_mode();
         stop_callback();
 
-        if (found)
+        if (sniffer::found)
         {
             printf("Pwnagotchi found!\n");
         }
@@ -234,4 +250,31 @@ void sniffer::sniff(int duration)
             printf("How did this happen?\n");
         }
     }
+}
+
+int sniffer::cmd_sniff(int argc, char **argv)
+{
+    if (argc == 2)
+    {
+        int duration = atoi(argv[1]);
+        sniff(duration);
+        
+        return 0;
+    }
+    else
+    {
+        sniff(0);
+
+        return 0;
+    }
+
+    return 1;
+}
+
+int sniffer::cmd_stop_sniff(int argc, char **argv)
+{
+    stop_monitor_mode();
+    stop_callback();
+
+    return 0;
 }

@@ -8,16 +8,21 @@
 #include <string.h>
 #include <cctype>
 #include <ArduinoJson.h>
+#include <esp_console.h>
 
 class sniffer {
     public:
         sniffer();
 
         static void sniff(int duration);
+        static int cmd_sniff(int argc, char **argv); 
         static void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type);
-    private:
-        static void stop_callback();
 
+        static void stop_callback();
+        static int cmd_stop_sniff(int argc, char **argv);
+
+        static bool found; // top tier solution: move it to public and call it a future feature!
+    private:
         static void get_mac(char *addr, const unsigned char *buff, int offset);
         static std::string extract_mac(const unsigned char *buff);
 
@@ -25,8 +30,6 @@ class sniffer {
         static void stop_monitor_mode();
 
         static void initialize_nvs();
-
-        static bool found;
 
         wifi_init_config_t wifi_init_config;
         wifi_country_t wifi_country;
